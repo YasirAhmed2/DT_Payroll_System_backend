@@ -1,0 +1,25 @@
+{
+  "name": "payroll-express-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node src/server.js",
+    "seed:admin": "node scripts/create-admin-accounts.js"
+  },
+  "dependencies": {
+    "argon2": "^0.41.1",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "decimal.js": "^10.6.0",
+    "dotenv": "^17.2.0",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.0.1",
+    "helmet": "^8.1.0",
+    "morgan": "^1.10.0",
+    "nodemailer": "^7.0.10",
+    "pdfkit": "^0.16.0",
+    "pg": "^8.16.3"
+  }
+}
