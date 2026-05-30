@@ -8,6 +8,13 @@ dotenv.config();
 const port = Number(process.env.PORT || 8000);
 const app = createApp();
 
+app.get("/", (req, res) => {
+  res.json({
+    success: true,
+    message: "DT Payroll Backend Running"
+  });
+});
+
 async function main() {
   await ensureSchema();
   app.listen(port, '0.0.0.0', () => {
