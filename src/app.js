@@ -5,8 +5,8 @@ import morgan from 'morgan';
 import { corsOrigins } from './config/env.js';
 import { registerRoutes } from './routes/index.js';
 
-// Pre-defined allowed origins for fallback resilience
-const allowedOrigins = [
+// Pre-defined allowed origins
+const ALLOWED_ORIGINS = [
   'https://digitaltechaccounts.netlify.app',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
@@ -27,7 +27,7 @@ function isOriginAllowed(origin) {
   const normalized = origin.toLowerCase().trim().replace(/\/$/, '');
 
   // 1. Check pre-defined allowed origins
-  if (allowedOrigins.some(allowed => allowed.toLowerCase().trim().replace(/\/$/, '') === normalized)) {
+  if (ALLOWED_ORIGINS.some(allowed => allowed.toLowerCase().trim().replace(/\/$/, '') === normalized)) {
     return true;
   }
 
@@ -44,7 +44,6 @@ function isOriginAllowed(origin) {
   }
 
   // 4. Allow any Netlify subdomains and deploy previews for digitaltechaccounts
-  // e.g. https://deploy-preview-12--digitaltechaccounts.netlify.app or https://main--digitaltechaccounts.netlify.app
   if (/^https:\/\/([a-z0-9-]+--)?digitaltechaccounts\.netlify\.app$/.test(normalized)) {
     return true;
   }
@@ -57,14 +56,44 @@ export function createApp() {
 
   app.set('trust proxy', 1);
 
-  // Configure Helmet securely, enabling cross-origin resource sharing for downloads/files (CORP)
+  // ─────────────────────────────────────────────────────────────────────────
+  // RAW CORS MIDDLEWARE — runs first, before helmet and everything else.
+  // Directly writes Access-Control headers on every response so no proxy
+  // or middleware can interfere with the CORS handshake.
+  // ─────────────────────────────────────────────────────────────────────────
+  app.use((req, res, next) => {
+    const origin = req.headers['origin'];
+
+    if (isOriginAllowed(origin)) {
+      // Set the exact requesting origin (required when credentials: true)
+      res.setHeader('Access-Control-Allow-Origin', origin || '*');
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    }
+
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD');
+    res.setHeader(
+      'Access-Control-Allow-Headers',
+      'Content-Type, Authorization, X-Requested-With, Accept, Origin, Access-Control-Request-Method, Access-Control-Request-Headers'
+    );
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
+    res.setHeader('Access-Control-Max-Age', '86400');
+
+    // Respond immediately to preflight OPTIONS requests
+    if (req.method === 'OPTIONS') {
+      return res.status(204).end();
+    }
+
+    next();
+  });
+
+  // Configure Helmet (runs after raw CORS so CORS headers are already set)
   app.use(helmet({
     contentSecurityPolicy: false,
     crossOriginResourcePolicy: { policy: 'cross-origin' },
     crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' }
   }));
 
-  // Robust, professional CORS configuration
+  // cors() package as a second safety layer
   const corsOptions = {
     origin: (origin, callback) => {
       if (isOriginAllowed(origin)) {
@@ -84,13 +113,9 @@ export function createApp() {
       'Access-Control-Request-Method',
       'Access-Control-Request-Headers'
     ],
-    exposedHeaders: ['Content-Disposition'], // Allows frontend to access the filename header for PDF/file exports
+    exposedHeaders: ['Content-Disposition'],
     optionsSuccessStatus: 200
   };
-
-  // Handle ALL preflight OPTIONS requests globally BEFORE any route middleware
-  // (rate-limiters, auth, etc.) can interfere with them.
-  app.options('/{*splat}', cors(corsOptions));
 
   app.use(cors(corsOptions));
 
