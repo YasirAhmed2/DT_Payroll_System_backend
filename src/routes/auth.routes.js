@@ -8,6 +8,7 @@ const authBurstLimit = rateLimit({
 	max: 20,
 	standardHeaders: true,
 	legacyHeaders: false,
+	skip: (req) => req.method === 'OPTIONS',
 });
 
 export function registerAuthRoutes(app) {

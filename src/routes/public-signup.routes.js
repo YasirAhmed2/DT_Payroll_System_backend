@@ -8,6 +8,7 @@ const publicSignupLimit = rateLimit({
 	max: 5,
 	standardHeaders: true,
 	legacyHeaders: false,
+	skip: (req) => req.method === 'OPTIONS',
 });
 
 export function registerPublicSignupRoutes(app) {

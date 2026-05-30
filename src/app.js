@@ -65,12 +65,12 @@ export function createApp() {
   }));
 
   // Robust, professional CORS configuration
-  app.use(cors({
+  const corsOptions = {
     origin: (origin, callback) => {
       if (isOriginAllowed(origin)) {
         callback(null, true);
       } else {
-        callback(null, false);
+        callback(new Error(`CORS: origin '${origin}' not allowed`));
       }
     },
     credentials: true,
@@ -86,7 +86,13 @@ export function createApp() {
     ],
     exposedHeaders: ['Content-Disposition'], // Allows frontend to access the filename header for PDF/file exports
     optionsSuccessStatus: 200
-  }));
+  };
+
+  // Handle ALL preflight OPTIONS requests globally BEFORE any route middleware
+  // (rate-limiters, auth, etc.) can interfere with them.
+  app.options('/{*splat}', cors(corsOptions));
+
+  app.use(cors(corsOptions));
 
   app.use(express.json({ limit: '2mb' }));
   app.use(morgan('dev'));
