@@ -2,55 +2,13 @@ import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import { corsOrigins } from './config/env.js';
 import { registerRoutes } from './routes/index.js';
 
-// Pre-defined allowed origins
-const ALLOWED_ORIGINS = [
-  'https://digitaltechaccounts.netlify.app',
-  'https://digitaltechaccounts.vercel.app',
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
-  'http://localhost:5174',
-  'http://127.0.0.1:5174',
-  'http://localhost:3000',
-  'http://127.0.0.1:3000'
-];
-
 /**
- * Checks if a given origin is allowed under the CORS policy.
- * Supports exact matches, configured env origins, localhost with any port,
- * and Netlify deploy previews/subdomains for digitaltechaccounts.
+ * Allows every origin so frontend deployments do not get blocked by CORS.
  */
 function isOriginAllowed(origin) {
-  if (!origin) return true; // Allow non-browser requests (Postman, curl, internal calls)
-
-  const normalized = origin.toLowerCase().trim().replace(/\/$/, '');
-
-  // 1. Check pre-defined allowed origins
-  if (ALLOWED_ORIGINS.some(allowed => allowed.toLowerCase().trim().replace(/\/$/, '') === normalized)) {
-    return true;
-  }
-
-  // 2. Check dynamic origins from env variables
-  if (corsOrigins && corsOrigins.length) {
-    if (corsOrigins.some(allowed => allowed.toLowerCase().trim().replace(/\/$/, '') === normalized)) {
-      return true;
-    }
-  }
-
-  // 3. Allow localhost/127.0.0.1 on any port for development flexibility
-  if (/^http:\/\/localhost(:\d+)?$/.test(normalized) || /^http:\/\/127\.0\.0\.1(:\d+)?$/.test(normalized)) {
-    return true;
-  }
-
-  // 4. Allow the known production frontend hosts and local development origins.
-  // Keep exact matches here so credentials-based requests only echo trusted origins.
-  if (/^https:\/\/([a-z0-9-]+--)?digitaltechaccounts\.netlify\.app$/.test(normalized)) {
-    return true;
-  }
-
-  return false;
+  return true;
 }
 
 export function createApp() {
@@ -66,11 +24,8 @@ export function createApp() {
   app.use((req, res, next) => {
     const origin = req.headers['origin'];
 
-    if (isOriginAllowed(origin)) {
-      // Set the exact requesting origin (required when credentials: true)
-      res.setHeader('Access-Control-Allow-Origin', origin || '*');
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-    }
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
 
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD');
     res.setHeader(
@@ -97,13 +52,7 @@ export function createApp() {
 
   // cors() package as a second safety layer
   const corsOptions = {
-    origin: (origin, callback) => {
-      if (isOriginAllowed(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error(`CORS: origin '${origin}' not allowed`));
-      }
-    },
+    origin: true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
     allowedHeaders: [
