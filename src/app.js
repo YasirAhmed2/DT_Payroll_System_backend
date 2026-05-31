@@ -4,13 +4,6 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { registerRoutes } from './routes/index.js';
 
-/**
- * Allows every origin so frontend deployments do not get blocked by CORS.
- */
-function isOriginAllowed(origin) {
-  return true;
-}
-
 export function createApp() {
   const app = express();
 
@@ -22,10 +15,7 @@ export function createApp() {
   // or middleware can interfere with the CORS handshake.
   // ─────────────────────────────────────────────────────────────────────────
   app.use((req, res, next) => {
-    const origin = req.headers['origin'];
-
-    res.setHeader('Access-Control-Allow-Origin', origin || '*');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Origin', '*');
 
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD');
     res.setHeader(
@@ -34,6 +24,7 @@ export function createApp() {
     );
     res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
     res.setHeader('Access-Control-Max-Age', '86400');
+    res.setHeader('Vary', 'Origin');
 
     // Respond immediately to preflight OPTIONS requests
     if (req.method === 'OPTIONS') {
@@ -52,8 +43,8 @@ export function createApp() {
 
   // cors() package as a second safety layer
   const corsOptions = {
-    origin: true,
-    credentials: true,
+    origin: '*',
+    credentials: false,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
     allowedHeaders: [
       'Content-Type',
