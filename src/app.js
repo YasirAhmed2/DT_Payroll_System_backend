@@ -8,6 +8,7 @@ import { registerRoutes } from './routes/index.js';
 // Pre-defined allowed origins
 const ALLOWED_ORIGINS = [
   'https://digitaltechaccounts.netlify.app',
+  'https://digitaltechaccounts.vercel.app',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
   'http://localhost:5174',
@@ -43,7 +44,8 @@ function isOriginAllowed(origin) {
     return true;
   }
 
-  // 4. Allow any Netlify subdomains and deploy previews for digitaltechaccounts
+  // 4. Allow the known production frontend hosts and local development origins.
+  // Keep exact matches here so credentials-based requests only echo trusted origins.
   if (/^https:\/\/([a-z0-9-]+--)?digitaltechaccounts\.netlify\.app$/.test(normalized)) {
     return true;
   }
