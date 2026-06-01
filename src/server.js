@@ -1,9 +1,7 @@
-import dotenv from 'dotenv';
+import 'dotenv/config'; // ← must be first: loads .env before any other module runs
 
 import { ensureSchema } from './db.js';
 import { createApp } from './app.js';
-
-dotenv.config();
 
 const port = Number(process.env.PORT || 8000);
 const app = createApp();
@@ -16,6 +14,7 @@ app.get("/", (req, res) => {
 });
 
 async function main() {
+
   await ensureSchema();
   app.listen(port, '0.0.0.0', () => {
     // eslint-disable-next-line no-console

@@ -9,14 +9,38 @@ export function createApp() {
 
   app.set('trust proxy', 1);
 
+  // ── Read env vars here (inside createApp) so dotenv.config() has already
+  // run in server.js before this function is called. Reading at module-level
+  // would execute before dotenv populates process.env.
+  const RAW_ORIGINS = process.env.CORS_ALLOWED_ORIGINS || '';
+  const ALLOWED_ORIGINS = RAW_ORIGINS
+    ? new Set(RAW_ORIGINS.split(',').map((o) => o.trim()).filter(Boolean))
+    : null; // null → allow all origins
+
+  /**
+   * Resolve the correct Access-Control-Allow-Origin value for a given request
+   * origin. When a whitelist is configured we echo back the matched origin so
+   * the browser accepts credentialed requests; otherwise we fall back to '*'.
+   */
+  function resolveOrigin(requestOrigin) {
+    if (!ALLOWED_ORIGINS) return '*';                           // no whitelist → allow all
+    if (requestOrigin && ALLOWED_ORIGINS.has(requestOrigin)) return requestOrigin; // exact match
+    // No match — return first whitelisted origin as a safe default
+    return ALLOWED_ORIGINS.values().next().value || '*';
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // RAW CORS MIDDLEWARE — runs first, before helmet and everything else.
-  // Directly writes Access-Control headers on every response so no proxy
-  // or middleware can interfere with the CORS handshake.
+  // Echoes back the specific allowed origin instead of '*' so that browsers
+  // accept both credentialed (Authorization header / cookies) and plain
+  // cross-origin requests without issues.
   // ─────────────────────────────────────────────────────────────────────────
   app.use((req, res, next) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    const requestOrigin = req.headers.origin;
+    const allowedOrigin = resolveOrigin(requestOrigin);
 
+    res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD');
     res.setHeader(
       'Access-Control-Allow-Headers',
@@ -41,10 +65,12 @@ export function createApp() {
     crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' }
   }));
 
-  // cors() package as a second safety layer
+  // cors() package as a second safety layer — mirrors the same origin logic
   const corsOptions = {
-    origin: '*',
-    credentials: false,
+    origin: (requestOrigin, callback) => {
+      callback(null, resolveOrigin(requestOrigin));
+    },
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
     allowedHeaders: [
       'Content-Type',
